@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Realm_G6视图</title>
+    <script src="https://gw.alipayobjects.com/os/antv/pkg/_antv.g6-3.4.8/dist/g6.min.js"></script>
+    <style>
+      body {
+        font-size: 0;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="container" style="width: 100vw; height: 100vh;"></div>
+    <script>
+      var set = new Set();
+      var globalProperties = [
+        "eval",
+        "isFinite",
+        "isNaN",
+        "parseFloat",
+        "parseInt",
+        "decodeURI",
+        "decodeURIComponent",
+        "encodeURI",
+        "encodeURIComponent",
+        "Array",
+        "Date",
+        "RegExp",
+        "Promise",
+        "Proxy",
+        "Map",
+        "WeakMap",
+        "Set",
+        "WeakSet",
+        "Function",
+        "Boolean",
+        "String",
+        "Number",
+        "Symbol",
+        "Object",
+        "Error",
+        "EvalError",
+        "RangeError",
+        "ReferenceError",
+        "SyntaxError",
+        "TypeError",
+        "URIError",
+        "ArrayBuffer",
+        "SharedArrayBuffer",
+        "DataView",
+        "Float32Array",
+        "Float64Array",
+        "Int8Array",
+        "Int16Array",
+        "Int32Array",
+        "Uint8Array",
+        "Uint16Array",
+        "Uint32Array",
+        "Uint8ClampedArray",
+        "Atomics",
+        "JSON",
+        "Math",
+        "Reflect",
+      ];
+
+      var arr = [];
+
+      var queue = [];
+
+      let data = {
+        id: "globalProperties",
+        children: [],
+      };
+
+      function handleProperties() {
+        globalProperties.forEach((p) => {
+          queue.push({
+            path: [p],
+            object: this[p],
+          });
+          arr.push([p]);
+        });
+
+        while (queue.length) {
+          var o = queue.shift();
+
+          if (set.has(o.object)) continue;
+          set.add(o.object);
+
+          // console.log(o);
+
+          Object.getOwnPropertyNames(o.object).forEach((p) => {
+            var property = Object.getOwnPropertyDescriptor(o.object, p);
+
+            if (
+              property.hasOwnProperty("value") &&
+              (typeof property.value === "function" ||
+                typeof property.value === "object")
+            ) {
+              queue.push({
+                path: o.path.concat([p]),
+                object: property.value,
+              });
+              arr.push(o.path.concat([p]));
+            }
+
+            if (
+              property.hasOwnProperty("set") &&
+              typeof property.set === "function"
+            ) {
+              queue.push({
+                path: o.path.concat([p]),
+                object: property.set,
+              });
+              arr.push(o.path.concat([p]));
+            }
+
+            if (
+              property.hasOwnProperty("get") &&
+              typeof property.get === "function"
+            ) {
+              queue.push({
+                path: o.path.concat([p]),
+                object: property.get,
+              });
+              arr.push(o.path.concat([p]));
+            }
+          });
+        }
+      }
+
+      function handleG6Data() {
+        let children = [];
+
+        while (arr.length) {
+          let path = arr.shift();
+          let i = 0;
+          let name = path[0],
+            name1 = path[1],
+            name2 = path[2];
+          switch (path.length) {
+            case 1:
+              children.push({
+                id: name,
+                children: [],
+              });
+              break;
+            case 2:
+              children.forEach((item) => {
+                if (item.id === name) {
+                  item.children.push({
+                    id: name1,
+                    children: [],
+                  });
+                }
+              });
+              break;
+            case 3:
+              children.forEach((item) => {
+                if (item.id === name) {
+                  item.children.forEach((item1) => {
+                    if (item1.id === name1) {
+                      item1.children.push({
+                        id: name2,
+                      });
+                    }
+                  });
+                }
+              });
+              break;
+
+            default:
+              break;
+          }
+        }
+
+        data.children = children;
+      }
+
+      function G6Render() {
+        const width = document.getElementById("container").scrollWidth;
+        const height = document.getElementById("container").scrollHeight || 500;
+        const graph = new G6.TreeGraph({
+          container: "container",
+          width,
+          height,
+          modes: {
+            default: [
+              {
+                type: "collapse-expand",
+                onChange: function onChange(item, collapsed) {
+                  const data = item.get("model").data;
+                  data.collapsed = collapsed;
+                  return true;
+                },
+              },
+              "drag-canvas",
+              "zoom-canvas",
+            ],
+          },
+          defaultNode: {
+            size: 26,
+            anchorPoints: [
+              [0, 0.5],
+              [1, 0.5],
+            ],
+            style: {
+              fill: "#C6E5FF",
+              stroke: "#5B8FF9",
+            },
+          },
+          defaultEdge: {
+            type: "cubic-horizontal",
+            style: {
+              stroke: "#A3B1BF",
+            },
+          },
+          layout: {
+            type: "compactBox",
+            direction: "LR",
+            getId: function getId(d) {
+              return d.id;
+            },
+            getHeight: function getHeight() {
+              return 16;
+            },
+            getWidth: function getWidth() {
+              return 16;
+            },
+            getVGap: function getVGap() {
+              return 10;
+            },
+            getHGap: function getHGap() {
+              return 100;
+            },
+          },
+        });
+
+        graph.node(function (node) {
+          return {
+            label: node.id,
+            labelCfg: {
+              offset: 10,
+              position:
+                node.children && node.children.length > 0 ? "left" : "right",
+            },
+          };
+        });
+
+        graph.data(data);
+        graph.render();
+        graph.fitView();
+      }
+      handleProperties();
+      // console.log(arr);
+      // console.log(set);
+      handleG6Data();
+      // console.log(data);
+      G6Render();
+    </script>
+  </body>
+</html>
