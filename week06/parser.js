@@ -1,96 +1,11 @@
-const css = require("css");
+const { addCSSRules, computeCSS } = require("./CSSParser");
+
 const EOF = Symbol("EOF"); //EOF: End Of File 用于结束的标志，只要是唯一的就可以
 let currentToken = null;
 let currentAttribute = null;
 let currentTextNode = null;
 
-let stack = [{ type: "document", children: [] }];
-
-let rules = [];
-
-function addCSSRules(text) {
-  let ast = css.parse(text);
-  rules.push(...ast.stylesheet.rules);
-}
-
-function computeCSS(element) {
-  const elements = stack.slice().reverse();
-
-  if (!element.computedStyle) element.computedStyle = {};
-
-  for (let rule of rules) {
-    let selectorParts = rule.selectors[0].split(" ").reverse();
-
-    if (!match(element, selectorParts[0])) continue;
-
-    let j = 1,
-      matched = false;
-    for (let i = 0; i < elements.length; i++) {
-      if (match(elements[i], selectorParts[j])) j++;
-    }
-
-    if (j >= selectorParts.length) matched = true;
-    if (matched) {
-      let sp = specificity(rule.selectors[0]);
-      //如果匹配到，就加入
-      let computedStyle = element.computedStyle;
-      for (let declaration of rule.declarations) {
-        if (!computedStyle[declaration.property]) {
-          computedStyle[declaration.property] = {};
-        }
-        if (!computedStyle[declaration.property].specificity) {
-          computedStyle[declaration.property].value = declaration.value;
-          computedStyle[declaration.property].specificity = sp.value;
-        } else if (
-          compare(computedStyle[declaration.property].specificity, sp) < 0
-        ) {
-          computedStyle[declaration.property].value = declaration.value;
-          computedStyle[declaration.property].specificity = sp.value;
-        }
-      }
-    }
-  }
-}
-
-function match(element, selector) {
-  if (!selector || !element.attributes) return false;
-  if (selector.charAt(0) === "#") {
-    let attr = element.attributes.filter((attr) => attr.name === "id")[0];
-    if (attr && attr.value === selector.replace("#", "")) return true;
-  } else if (selector.charAt(0) === ".") {
-    let attr = element.attributes.filter((attr) => attr.name === "class")[0];
-    if (attr && attr.value === selector.replace(".", "")) return true;
-  } else {
-    if (element.tagName === selector) return true;
-  }
-}
-
-function specificity(selector) {
-  const p = [0, 0, 0, 0];
-  const selectorParts = selector.split(" ");
-
-  for (let part of selectorParts) {
-    if (part.charAt(0) === "#") {
-      p[1] += 1;
-    } else if (part.charAt(0) === ".") {
-      p[2] += 1;
-    } else {
-      p[3] += 1;
-    }
-  }
-  return p;
-}
-
-function compare(sp1, sp2) {
-  if (sp1[0] - sp2[0]) {
-    return sp1[0] - sp2[0];
-  } else if (sp1[1] - sp2[1]) {
-    return sp1[1] - sp2[1];
-  } else if (sp1[2] - sp2[2]) {
-    return sp1[2] - sp2[2];
-  }
-  return sp1[3] - sp2[3];
-}
+const stack = [{ type: "document", children: [] }];
 
 function emit(token) {
   let top = stack[stack.length - 1];
@@ -111,7 +26,7 @@ function emit(token) {
       }
     }
 
-    computeCSS(element);
+    computeCSS(element, stack);
 
     top.children.push(element);
     element.parent = top;
@@ -351,8 +266,6 @@ module.exports.parseHTML = function parseHTML(html) {
     state = state(c);
   }
   state = state(EOF);
-
-  console.log(state[0]);
 
   return state[0];
 };
