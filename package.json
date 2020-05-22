@@ -1,0 +1,41 @@
+{
+  "name": "Frontend-01-Template",
+  "version": "1.0.0",
+  "description": "请大家通过该链接查看讲师课件并进行下载，链接: https://pan.baidu.com/s/1JFtYmCg2aGRcMAnCnqZRbw 密码:xanj",
+  "main": "index.js",
+  "dependencies": {
+    "_css@2.2.4@css": "^2.2.4",
+    "_inherits@2.0.4@inherits": "^2.0.4",
+    "_decode-uri-component@0.2.0@decode-uri-component": "^0.2.0",
+    "_resolve-url@0.2.1@resolve-url": "^0.2.1",
+    "css": "^2.2.4",
+    "inherits": "^2.0.4",
+    "_source-map-url@0.4.0@source-map-url": "^0.4.0",
+    "decode-uri-component": "^0.2.0",
+    "resolve-url": "^0.2.1",
+    "_source-map@0.6.1@source-map": "^0.6.1",
+    "_source-map-resolve@0.5.3@source-map-resolve": "^0.5.3",
+    "_atob@2.1.2@atob": "^2.1.2",
+    "atob": "^2.1.2",
+    "source-map": "^0.6.1",
+    "_urix@0.1.0@urix": "^0.1.0",
+    "source-map-resolve": "^0.5.3",
+    "source-map-url": "^0.4.0",
+    "urix": "^0.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/softtearsmile/Frontend-01-Template.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/softtearsmile/Frontend-01-Template/issues"
+  },
+  "homepage": "https://github.com/softtearsmile/Frontend-01-Template#readme"
+}
