@@ -234,12 +234,13 @@ void (async function () {
   const response = await request.send();
   const dom = parser.parseHTML(response.body);
 
-  // const viewport = images(800, 600);
+  const viewport = images(800, 600);
 
-  // render(viewport, dom);
+  render(viewport, dom);
 
-  // viewport.save("viewport.jpg");
-  console.log(dom);
+  viewport.save("viewport.jpg");
+
+  // console.log(dom);
 })();
 
 // console.log(`

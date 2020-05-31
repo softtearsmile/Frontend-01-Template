@@ -20,11 +20,12 @@ function getStyle(element) {
 function layout(element) {
   if (!element.computedStyle) return;
 
-  const elementStyle = getStyle(element);
+  const style = getStyle(element);
 
   //不是弹性布局则弹出
-  if (elementStyle.display !== "flex") return;
+  if (style.display !== "flex") return;
 
+  //取出主元素下的子元素
   const items = element.children.filter((e) => e.type === "element");
   let items_length = items.length;
 
@@ -32,9 +33,10 @@ function layout(element) {
     return (a.order || 0) - (b.order || 0);
   });
 
-  const style = elementStyle;
+  // const style = elementStyle;
 
-  [("width", "height")].forEach((size) => {
+  //给主元素宽高打上null方便后面计算
+  ["width", "height"].forEach((size) => {
     if (style[size] === "auto" || style[size] === "") {
       style[size] = null;
     }
@@ -125,53 +127,60 @@ function layout(element) {
     crossSign = 1;
   }
 
-  let isAutoMainSize = false;
+  // console.log(items);
 
+  //主元素无设主轴的长度则是子元素累加
+  let isAutoMainSize = false;
   if (!style[mainSize]) {
     style[mainSize] = 0;
-    for (let i = 0; i < items.length; i++) {
-      let item = items[i];
-      let itemStyle = getStyle(item);
+    items.forEach((item) => {
+      const itemStyle = getStyle(item);
       if (itemStyle[mainSize] !== null || itemStyle[mainSize] !== void 0) {
         style[mainSize] += itemStyle[mainSize];
       }
-    }
+    });
+
     isAutoMainSize = true;
   }
 
-  let flexLine = [];
-  let flexLines = [flexLine];
+  // 第二步：元素分行
 
+  let flexLine = []; //表示一行
+  const flexLines = [flexLine]; //表示所有行
+
+  //剩余空间
   let mainSpace = style[mainSize];
   let crossSpace = 0;
-
-  for (let i = 0; i < items_length; i++) {
-    let item = items[i];
-    let itemStyle = getStyle(item);
+  items.forEach((item) => {
+    const itemStyle = getStyle(item);
 
     if (itemStyle[mainSize] === null) itemStyle[mainSize] = 0;
 
     if (itemStyle.flex) {
-      flexLine.push(itemStyle);
+      //有flex的元素，即可伸缩
+      flexLine.push(item);
     } else if (style.flexWrap === "nowrap" && isAutoMainSize) {
       mainSpace -= itemStyle[mainSize];
       if (itemStyle[crossSize] !== null || itemStyle[crossSize] !== void 0) {
-        crossSpace = Math.max(crossSpace, itemStyle[crossSize]);
+        crossSpace = Math.max(crossSpace, itemStyle[crossSize]); //cross为子元素 crossSize最大值
       }
 
       flexLine.push(itemStyle);
     } else {
+      //如果子元素比父元素还大，则限制
       if (itemStyle[mainSize] > style[mainSize]) {
         itemStyle[mainSize] = style[mainSize];
       }
 
+      //如果剩余空间不够容纳不了当前子元素
       if (mainSpace < itemStyle[mainSize]) {
         flexLine.mainSpace = mainSpace;
         flexLine.crossSpace = crossSpace;
 
-        flexLine = [item];
+        flexLine = [item]; //另起一行
         flexLines.push(flexLine);
 
+        //重置剩余空间
         mainSpace = style[mainSize];
         crossSpace = 0;
       } else {
@@ -183,10 +192,15 @@ function layout(element) {
       }
       mainSpace -= itemStyle[mainSize];
     }
-  }
+  });
 
   flexLine.mainSpace = mainSpace;
 
+  // console.log(items);
+
+  // 第三步：计算主轴
+
+  //主轴不换行
   if (style.flexWrap === "nowrap" || isAutoMainSize) {
     flexLine.crossSpace =
       style[crossSize] !== undefined ? style[crossSize] : crossSpace;
@@ -195,46 +209,44 @@ function layout(element) {
   }
 
   if (mainSpace < 0) {
-    let scale = style[mainSize] / (style[mainSize] - mainSpace);
+    //单行需要压缩子元素情况
+    let scale = style[mainSize] / (style[mainSize] - mainSpace); // scale < 1
     let currentMain = mainBase;
-    for (let i = 0; i < items_length; i++) {
-      let item = items[i];
+    items.forEach((item) => {
       let itemStyle = getStyle(item);
 
-      if (itemStyle.flex) {
-        itemStyle[mainSize] = 0;
-      }
+      if (itemStyle.flex) itemStyle[mainSize] = 0; //flex元素先置0
 
       itemStyle[mainSize] *= scale;
+
       itemStyle[mainStart] = currentMain;
       itemStyle[mainEnd] =
         itemStyle[mainStart] + mainSign * itemStyle[mainSize];
 
       currentMain = itemStyle[mainEnd];
-    }
+    });
   } else {
-    flexLines.forEach((items) => {
-      let mainSpace = items.mainSpace;
-      let flexTotal = 0;
-
-      for (let i = 0; i < items_length; i++) {
-        let item = items[i];
-        let itemStyle = getStyle(item);
+    //有剩余空间
+    flexLines.forEach((flexLine) => {
+      let mainSpace = flexLine.mainSpace;
+      let flexTotal = 0; //flex总值
+      //找flex总值
+      flexLine.forEach((item) => {
+        const itemStyle = getStyle(item);
 
         if (itemStyle.flex !== null && itemStyle.flex !== void 0) {
           flexTotal += itemStyle.flex;
-          continue;
         }
-      }
+      });
 
       if (flexTotal > 0) {
+        //有flex的子元素
         let currentMain = mainBase;
-        for (let i = 0; i < items_length; i++) {
-          let item = items[i];
-          let itemStyle = getStyle(item);
+        flexLine.forEach((item) => {
+          const itemStyle = getStyle(item);
 
           if (itemStyle.flex) {
-            itemStyle[mainSize] = (mainSpace / flexTotal) * itemStyle.flex;
+            itemStyle[mainSize] = mainSpace * (itemStyle.flex / flexTotal);
           }
 
           itemStyle[mainStart] = currentMain;
@@ -242,9 +254,10 @@ function layout(element) {
             itemStyle[mainStart] + mainSign * itemStyle[mainSize];
 
           currentMain = itemStyle[mainEnd];
-        }
+        });
       } else {
-        let currentMain, step;
+        //有剩余空间，但没有flex元素，justifyContent 开始工作
+        let currentMain, step; //step额外空间
         switch (style.justifyContent) {
           case "flex-start":
             currentMain = mainBase;
@@ -255,7 +268,7 @@ function layout(element) {
             step = 0;
             break;
           case "center":
-            currentMain = (v / 2) * mainSign + mainBase;
+            currentMain = (mainSpace / 2) * mainSign + mainBase;
             step = 0;
             break;
           case "space-between":
@@ -266,15 +279,27 @@ function layout(element) {
             step = (mainSpace / items_length) * mainSign;
             currentMain = step / 2 + mainBase;
             break;
-
           default:
             break;
         }
+        flexLine.forEach((item) => {
+          const itemStyle = getStyle(item);
+
+          itemStyle[mainStart] = currentMain;
+          itemStyle[mainEnd] =
+            itemStyle[mainStart] + mainSign * itemStyle[mainSize];
+
+          currentMain = itemStyle[mainEnd] + step;
+        });
       }
     });
   }
+  // console.log(items);
+  // 第四步：计算交叉轴
+  // 主要考虑 align-items和align-self
 
   if (!style[crossSize]) {
+    //主元素在交叉轴上是 auto
     crossSpace = 0;
     style[crossSize] = 0;
     flexLines.forEach((flexLine) => {
@@ -287,6 +312,7 @@ function layout(element) {
     });
   }
 
+  //若wrap-reverse 交叉轴方向反转
   crossSpace = style.flexWrap === "wrap-reverse" ? style[crossSize] : 0;
 
   let lineSize = style[crossSize] / flexLines.length;
@@ -321,14 +347,14 @@ function layout(element) {
       break;
   }
 
-  flexLines.forEach((items) => {
+  flexLines.forEach((flexLine) => {
     let lineCrossSize =
       style.alignContent === "stretch"
-        ? items.crossSpace + crossSpace / flexLines.length
-        : items.crossSpace;
+        ? flexLine.crossSpace + crossSpace / flexLines.length
+        : flexLine.crossSpace;
 
-    items.forEach((item) => {
-      let itemStyle = getStyle(item);
+    flexLine.forEach((item) => {
+      const itemStyle = getStyle(item);
 
       let align = itemStyle.alignSelf || style.alignItems;
 
@@ -364,7 +390,7 @@ function layout(element) {
             crossSign *
               (itemStyle[crossSize] !== null && itemStyle[crossSize] !== void 0)
               ? itemStyle[crossSize]
-              : lineCrossSize;
+              : lineSize;
 
           itemStyle[crossSize] =
             crossSign * (itemStyle[crossEnd] - itemStyle[crossStart]);
@@ -374,9 +400,8 @@ function layout(element) {
         default:
           break;
       }
-
-      crossBase += crossSign * (lineCrossSize + step);
     });
+    crossBase += crossSign * (lineCrossSize + step);
   });
 
   console.log(items);
