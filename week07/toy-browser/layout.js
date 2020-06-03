@@ -55,6 +55,8 @@ function layout(element) {
   if (!style.alignContent || style.alignContent === "auto") {
     style.alignContent = "stretch";
   }
+
+  //第一步：定义好主轴和交叉轴的属性
   let mainSize,
     mainStart,
     mainEnd,
@@ -404,7 +406,7 @@ function layout(element) {
     crossBase += crossSign * (lineCrossSize + step);
   });
 
-  console.log(items);
+  // console.log(items);
 }
 
 module.exports = layout;
