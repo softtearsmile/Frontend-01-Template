@@ -31,27 +31,31 @@ function match(selector, element) {
 match("div > a#id.class.abc:hover");
 ```
 
+# CSS
+
 ## 选择器
+
+见脑图
 
 ### 选择器语法
 
-- 简单选择器
-  - - (全体)
-  - div svg|a (标签)
-  - .cls (类)
-  - #id (id)
-  - [attr=value](属性)
-  - :hover (伪类)
-  - ::before (伪元素)
-- 复合选择器
-  - <简单> <简单> <简单>
-  - - 和 div 在最前面
-- 复杂选择器
-  - 后代：<复合><space><复合> (css2)
-  - 子元素：<复合>'>'<复合> (css3)
-  - 兄弟：<复合>'~'<复合> (选择该选择器之后的兄弟元素，css3)
-  - 亲兄弟：<复合>'+'<复合> (只有一个，css3)
-  - <复合>'||'<复合> (css4)
++ 简单选择器
+    + * (全体)
+    + div svg|a (标签)
+    + .cls (类)
+    + #id (id)
+    + [attr=value] (属性)
+    + :hover (伪类)
+    + ::before (伪元素)
++ 复合选择器
+    + <简单> <简单> <简单>
+    + * 和 div 在最前面
++ 复杂选择器
+    + 后代：<复合><space><复合> (css2)
+    + 子元素：<复合>'>'<复合> (css3)
+    + 兄弟：<复合>'~'<复合> (选择该选择器之后的兄弟元素，css3)
+    + 亲兄弟：<复合>'+'<复合> (只有一个，css3)
+    + <复合>'||'<复合> (css4)
 
 ### 选择器优先级
 
@@ -65,56 +69,64 @@ div.a 0011
 
 ### 伪类
 
-- 链接/行为
-  - :any-link(表示所有超链接相关)
-  - :link(没访问过的) :visited(访问过的)
-  - :hover(鼠标移入元素)
-  - :active(针对有交互的元素)
-  - :focus
-  - :target(比较新的浏览器才有)
-- 树结构
-  - :empty
-  - :nth-child()
-  - :nth-last-child()
-  - :first-child :last-child :only-child
-- 逻辑型
-  - :not 伪类
-  - :where :has (css4 标准，大概率不会实现)
++ 链接/行为
+    + :any-link(表示所有超链接相关)
+    + :link(没访问过的) :visited(访问过的)
+    + :hover(鼠标移入元素)
+    + :active(针对有交互的元素)
+    + :focus
+    + :target(比较新的浏览器才有)
++ 树结构
+    + :empty
+    + :nth-child()
+    + :nth-last-child()
+    + :first-child :last-child :only-child
++ 逻辑型
+    + :not伪类
+    + :where :has (css4标准，大概率不会实现)
 
 ### 伪元素
 
 不一定非得双:
-
-- ::before
-- ::after
-- ::first-line 都是文字上的属性，非盒上的，需要在 layout 之后再计算这部分的 css
-  - font
-  - color
-  - background
-  - word-spacing
-  - letter-spacing
-  - text-decoration
-  - text-transform
-  - line-height
-- ::first-letter
-  - ...同上
-  - float
-  - vertical-align
-  - 盒模型系列：margin,padding,border
++ ::before
++ ::after
++ ::first-line 都是文字上的属性，非盒上的，需要在layout之后再计算这部分的css
+    + font
+    + color
+    + background
+    + word-spacing
+    + letter-spacing
+    + text-decoration
+    + text-transform
+    + line-height
++ ::first-letter
+    + ...同上
+    + float
+    + vertical-align
+    + 盒模型系列：margin,padding,border
 
 #### 思考：
 
 为什么 first-letter 可以设置 float 之类的，而 first-line 不行呢？
 
-first-line 如果是指 float 就脱离文档流就不是正常流的 first-line ，会造成死循环
+first-line如果是指 float 就脱离文档流就不是正常流的 first-line ，会造成死循环
 
 ## 排版
 
 ### 盒
 
-- 标签：html 里面写的<>
-- 元素：心里面知道的语义
-- 盒：网页中看到四方块
-  - 盒模型
-    - border-box：内容+内边距 = 宽高
-    - content-box：内容 = 宽高
++ 标签：html里面写的<>
++ 元素：心里面知道的语义
++ 盒：网页中看到四方块(行盒看不到)
+    + 盒模型
+        + border-box：内容+内边距 = 宽高
+        + content-box：内容 = 宽高
+    + 行盒：可以理解为一个行为一个盒子，里面装了至少一个盒
+
+### 正常流的行模型
+
+vertical-align : **top** **bottom** **middle** baseline  text-top text-bottom
+
+### float和clear
+
+### [BFC(margin折叠)](https://zhuanlan.zhihu.com/p/25321647)
