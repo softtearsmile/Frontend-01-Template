@@ -120,7 +120,7 @@
       return JSON.parse(JSON.stringify(pattern));
     }
 
-    function willWin(pattern) {
+    function willWin(pattern, color) {
       for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
           if (pattern[i][j] !== 0) continue;
@@ -179,9 +179,9 @@
           let tmp = clone(pattern);
           tmp[i][j] = color;
           let opp = bestChoise(tmp, 3 - color);
-          if (-opp.result >= result) {
+          if (opp.result * -1 >= result) {
             point = [i, j];
-            result = -opp.result;
+            result = opp.result * -1;
           }
           if (result === 1) break outer;
         }
