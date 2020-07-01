@@ -1,0 +1,179 @@
+<script>
+  // Trie树
+  {
+    class Trie {
+      constructor() {
+        this.root = Object.create(null);
+      }
+      insert(word) {
+        let node = this.root;
+        for (let c of word) {
+          if (!node[c]) {
+            node[c] = Object.create(null);
+          }
+          node = node[c];
+        }
+        if (!("$" in node)) {
+          node["$"] = 0;
+        }
+        node["$"]++;
+      }
+      most() {
+        let max = 0;
+        let maxWord = null;
+        let visit = (node, word) => {
+          if (node.$ && node.$ > max) {
+            max = node.$;
+            maxWord = word;
+          }
+          for (let p in node) {
+            visit(node[p], word + p);
+          }
+        };
+        visit(this.root, "");
+      }
+    }
+
+    function randomWord(length) {
+      let s = "";
+      for (let i = 0; i < length; i++) {
+        s += String.fromCharCode(Math.random() * 26 + "a".charCodeAt(0));
+      }
+      return s;
+    }
+
+    let trie = new Trie();
+
+    for (let i = 0; i < 10000; i++) {
+      trie.insert(randomWord(4));
+    }
+  }
+
+  // LR
+  function parse(source) {
+    let stack = [];
+    for (let c of source) {
+      if (c === "(" || c === "[" || c === "{") {
+        stack.push(c);
+      } else if ([")", "]", "}"].indexOf(c) > -1) {
+        if (
+          ["(", "[", "{"].indexOf(stack[stack.length - 1]) ===
+          [")", "]", "}"].indexOf(c)
+        ) {
+          stack.pop();
+        } else {
+          return false;
+        }
+      }
+    }
+    return stack.length ? true : false;
+  }
+
+  /**
+   * KMP算法
+   * @param {pattern} p 模版字符串
+   * @param {String} m 主字符串
+   * @returns {Number} 匹配的模版字符串的首位在主字符串的下标
+   */
+  function kmp(pattern, string) {
+    const m = pattern.length; //模版字符串的长度
+    const n = string.length; //主字符串的长度
+    const next = getNexts(pattern, m);
+    let i = 0,
+      j = 0;
+    while (i < n) {
+      while (j > 0 && pattern[j] !== string[i]) {
+        console.log(i, j);
+        j = next[j - 1] + 1;
+      }
+
+      if (pattern[j] === string[i]) {
+        j++;
+      }
+      if (j === m) {
+        return i - m + 1;
+      }
+      i++;
+    }
+
+    return -1;
+    /**
+     * 获取失效数组
+     * @param {String} b //模版字符串
+     * @returns {Array}
+     */
+    function getNexts(b) {
+      const m = b.length;
+      const next = new Array(m);
+      next[0] = -1;
+      let k = -1;
+      for (let i = 1; i < m; i++) {
+        while (k !== -1 && b[k + 1] !== b[i]) {
+          k = next[k];
+        }
+        if (b[k + 1] === b[i]) {
+          k++;
+        }
+        next[i] = k;
+      }
+
+      return next;
+    }
+  }
+
+  //WildCard
+  function find(soure, pattern) {
+    let startCount = 0;
+    for (let i = 0; i < pattern.length; i++) {
+      if (pattern[i] === "*") {
+        startCount++;
+      }
+    }
+    if (startCount === 0) {
+      for (let i = 0; i < pattern.length; i++) {
+        if (pattern[i] !== source[i] && pattern[i] !== "?") {
+          return false;
+        }
+      }
+      return;
+    }
+
+    let i = 0;
+    let lastIndex = 0;
+
+    while (pattern[i] !== "*") {
+      if (pattern[i] !== source[i] && pattern[i] !== "?") return false;
+
+      i++;
+    }
+    lastIndex = i;
+
+    for (let p = 0; p < startCount - 1; p++) {
+      i++;
+      let subPattern = "";
+      while (pattern[i] !== "*") {
+        subPattern += pattern[i];
+        i++;
+      }
+
+      let reg = new RegExp(subPattern.replace(/\?/g, "[\\s\\S]", g));
+      console.log(reg.exec(source));
+      lastIndex = reg.lastIndex;
+    }
+
+    for (
+      let j = 0;
+      j <= source.length - lastIndex && pattern[pattern.length - j] !== "*";
+      j++
+    ) {
+      if (
+        pattern[pattern.length - j] !== source[source.length - j] &&
+        pattern[pattern.length - j] !== "?"
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+</script>
