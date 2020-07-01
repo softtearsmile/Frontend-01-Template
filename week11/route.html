@@ -13,16 +13,16 @@
       font-size: 0;
     }
     #container {
+      display: flex;
+      flex-wrap: wrap;
       width: 701px;
     }
     .cell {
-      display: inline-block;
       width: 6px;
       height: 6px;
       background-color: gray;
       border-bottom: solid 1px white;
       border-right: solid 1px white;
-      vertical-align: middle;
     }
   </style>
   <body>
@@ -30,36 +30,6 @@
     <button onclick="localStorage.map = JSON.stringify(map)">save</button>
     <button onclick="findPath(map,[0,0],[50,50])">go</button>
     <script>
-      class Sorted {
-        constructor(data, compare) {
-          this.data = data;
-          this.compare = compare;
-        }
-        take() {
-          if (!this.data.length) return;
-
-          let min = this.data[0];
-          let minIndex = 0;
-          for (let i = 1; i < this.data.length; i++) {
-            if (this.compare(this.data[i], min) < 0) {
-              min = this.data[i];
-              minIndex = i;
-            }
-          }
-
-          this.data[minIndex] = this.data[this.data.length - 1];
-          this.data.pop();
-
-          return min;
-        }
-        insert(v) {
-          this.data.push(v);
-        }
-        get length() {
-          return this.data.length;
-        }
-      }
-
       let map = localStorage.map
         ? JSON.parse(localStorage.map)
         : new Array(10000).fill(0);
@@ -70,7 +40,7 @@
 
       document.addEventListener("mousedown", (e) => {
         mousedown = true;
-        clear = e.which === 3; //右键清除
+        clear = e.button === 2; //右键清除
       });
       document.addEventListener("mouseup", () => {
         mousedown = false;
@@ -110,66 +80,253 @@
         });
       }
 
-      async function findPath(map, start, end) {
-        map = map.slice();
+      // 广度优先搜索
+      function findPath(map, start, end) {
+        map = map.slice(); //深克隆
 
+        // 标记起终
+        {
+          container.children[start[1] * 100 + start[0]].style.backgroundColor =
+            "blue";
+          container.children[end[1] * 100 + end[0]].style.backgroundColor =
+            "red";
+        }
+
+        //计算点到终点的距离
         function distance([x, y]) {
           return (x - end[0]) ** 2 + (y - end[1]) ** 2;
         }
 
-        let collection = new Sorted(
-          [start],
-          (a, b) => distance(a) - distance(b)
-        );
-
-        container.children[start[1] * 100 + start[0]].style.backgroundColor =
-          "green";
-        container.children[end[1] * 100 + end[0]].style.backgroundColor =
-          "green";
-
-        async function insert([x, y], pre) {
-          if (map[100 * y + x] !== 0) return;
-
-          if (x < 0 || y < 0 || x >= 100 || y >= 100) return;
-
-          map[100 * y + x] = pre;
-          container.children[y * 100 + x].style.backgroundColor = "lightgreen";
-          await sleep(1);
-          collection.insert([x, y]);
-        }
-
-        while (collection.length) {
-          console.log(collection);
-
-          let [x, y] = collection.take();
-
-          if (x === end[0] && y !== start[1]) {
-            let path = [];
-            while (x !== start[0] && y === end[1]) {
-              path.push([x, y]);
-              await sleep(30);
-              container.children[y * 100 + x].style.backgroundColor = "pink";
-              [x, y] = map[y * 100 + x];
-            }
-
-            console.log(map);
-
-            return path;
+        //标注最佳距离
+        async function bestPath([x, y]) {
+          let path = [];
+          while (x !== start[0] || y !== start[1]) {
+            path.push([x, y]);
+            container.children[y * 100 + x].style.backgroundColor = "pink";
+            [x, y] = map[y * 100 + x];
+            await sleep(0.01);
           }
 
-          //上下左右
-          await insert([x - 1, y], [x, y]);
-          await insert([x + 1, y], [x, y]);
-          await insert([x, y - 1], [x, y]);
-          await insert([x, y + 1], [x, y]);
-
-          //斜上下左右
-          await insert([x - 1, y - 1], [x, y]);
-          await insert([x + 1, y - 1], [x, y]);
-          await insert([x - 1, y + 1], [x, y]);
-          await insert([x + 1, y + 1], [x, y]);
+          return path;
         }
-        return null;
+
+        // 插入方法
+        async function insert([x, y], pre, callback) {
+          if (map[y * 100 + x] !== 0) return; //黑点
+          if (x < 0 || y < 0 || x > 100 || y > 100) return; //边界
+
+          container.children[y * 100 + x].style.backgroundColor = "lightgreen";
+          map[y * 100 + x] = pre;
+
+          await sleep(0.01);
+
+          callback([x, y]);
+        }
+
+        // 广度优先搜索
+        async function span() {
+          let queue = [start];
+          while (queue.length) {
+            let [x, y] = queue.shift();
+
+            if (x === end[0] && y === end[1]) {
+              return bestPath([x, y]);
+            }
+
+            // 上下左右
+            await insert([x + 1, y], [x, y], (v) => queue.push(v));
+            await insert([x - 1, y], [x, y], (v) => queue.push(v));
+            await insert([x, y + 1], [x, y], (v) => queue.push(v));
+            await insert([x, y - 1], [x, y], (v) => queue.push(v));
+            // 斜上下左右
+            await insert([x + 1, y + 1], [x, y], (v) => queue.push(v));
+            await insert([x - 1, y + 1], [x, y], (v) => queue.push(v));
+            await insert([x + 1, y + 1], [x, y], (v) => queue.push(v));
+            await insert([x + 1, y - 1], [x, y], (v) => queue.push(v));
+          }
+        }
+
+        // 深度优先搜索
+        async function deep() {
+          let stack = [start];
+          while (stack.length) {
+            let [x, y] = stack.shift();
+
+            if (x === end[0] && y === end[1]) {
+              return bestPath([x, y]);
+            }
+
+            // 上下左右
+            await insert([x + 1, y], [x, y], (v) => stack.unshift(v));
+            await insert([x - 1, y], [x, y], (v) => stack.unshift(v));
+            await insert([x, y + 1], [x, y], (v) => stack.unshift(v));
+            await insert([x, y - 1], [x, y], (v) => stack.unshift(v));
+
+            // 斜上下左右
+            await insert([x + 1, y + 1], [x, y], (v) => stack.unshift(v));
+            await insert([x - 1, y + 1], [x, y], (v) => stack.unshift(v));
+            await insert([x + 1, y + 1], [x, y], (v) => stack.unshift(v));
+            await insert([x + 1, y - 1], [x, y], (v) => stack.unshift(v));
+          }
+        }
+
+        // 排序找最小的数值
+        async function sort() {
+          class Sorted {
+            constructor(data, compare) {
+              this.data = data;
+              this.compare = compare;
+            }
+            take() {
+              if (!this.data.length) return;
+
+              let min = this.data[0];
+              let minIndex = 0;
+              for (let i = 1; i < this.data.length; i++) {
+                if (this.compare(min, this.data[i]) > 0) {
+                  min = this.data[i];
+                  minIndex = i;
+                }
+              }
+              this.data[minIndex] = this.data[this.data.length - 1];
+              this.data.pop();
+
+              return min;
+            }
+            insert(v) {
+              this.data.push(v);
+            }
+            get length() {
+              return this.data.length;
+            }
+          }
+
+          let collection = new Sorted(
+            [start],
+            (a, b) => distance(a) - distance(b)
+          );
+
+          while (collection.length) {
+            let [x, y] = collection.take();
+
+            if (x === end[0] && y === end[1]) {
+              return bestPath([x, y]);
+            }
+
+            // 上下左右
+            await insert([x + 1, y], [x, y], (v) => collection.insert(v));
+            await insert([x - 1, y], [x, y], (v) => collection.insert(v));
+            await insert([x, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x, y - 1], [x, y], (v) => collection.insert(v));
+
+            // 斜上下左右
+            await insert([x + 1, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x - 1, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x + 1, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x + 1, y - 1], [x, y], (v) => collection.insert(v));
+          }
+        }
+
+        // 小顶堆找最小数值
+        async function heap() {
+          class BinaryHeap {
+            constructor(data, compare) {
+              this.data = [null, data];
+              this.current = null;
+              this.compare = compare;
+            }
+            take() {
+              if (this.data.length === 1) return;
+
+              let min = this.data[1];
+
+              this.data[1] = this.data[this.data.length - 1];
+              this.data[this.data.length - 1] = null;
+              this.data.pop();
+
+              this.up_to_bottom();
+
+              return min;
+            }
+            insert(v) {
+              this.data.push(v);
+              this.bottom_to_up();
+            }
+            //自上往下堆化
+            up_to_bottom() {
+              let a = this.data,
+                c = this.data.length - 1,
+                i = 1;
+              let min_i, i_left, i_right;
+
+              while (true) {
+                min_i = i;
+                i_left = i * 2;
+                i_right = i * 2 + 1;
+                if (i_left <= c && this.compare(a[i], a[i_left]) > 0)
+                  min_i = i_left;
+                if (i_right <= c && this.compare(a[min_i], a[i_right]) > 0)
+                  min_i = i_right;
+                if (i === min_i) break; //跳出循环
+                this.swap(a, i, min_i);
+                i = min_i;
+              }
+            }
+            //自下往上堆化
+            bottom_to_up() {
+              let a = this.data;
+              let i = this.data.length - 1;
+              let i_p = Math.floor(i / 2);
+
+              while (i_p > 0 && this.compare(a[i], a[i_p]) < 0) {
+                this.swap(a, i, i_p);
+                i = i_p;
+                i_p = Math.floor(i / 2);
+              }
+            }
+            //根据下标交换元素
+            swap(a, i1, i2) {
+              if (i1 === i2) return;
+              this.current = a[i1];
+              a[i1] = a[i2];
+              a[i2] = this.current;
+            }
+            get length() {
+              return this.data.length;
+            }
+          }
+
+          let collection = new BinaryHeap(
+            start,
+            (a, b) => distance(a) - distance(b)
+          );
+
+          while (collection.length) {
+            let [x, y] = collection.take();
+
+            if (x === end[0] && y === end[1]) {
+              return bestPath([x, y]);
+            }
+
+            // 上下左右
+            await insert([x + 1, y], [x, y], (v) => collection.insert(v));
+            await insert([x - 1, y], [x, y], (v) => collection.insert(v));
+            await insert([x, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x, y - 1], [x, y], (v) => collection.insert(v));
+
+            // 斜上下左右
+            await insert([x + 1, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x - 1, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x + 1, y + 1], [x, y], (v) => collection.insert(v));
+            await insert([x + 1, y - 1], [x, y], (v) => collection.insert(v));
+          }
+        }
+        // span();
+        // deep();
+        // sort();
+        heap();
+
+        return false;
       }
     </script>
   </body>
