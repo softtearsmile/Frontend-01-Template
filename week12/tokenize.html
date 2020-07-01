@@ -1,0 +1,128 @@
+<script>
+  let regexp = /([0-9\.]+)|([ ]+)|([\r\n]+)|(\+)|(\-)|(\*)|(\/)/g;
+
+  let dictionary = [
+    "Number",
+    "Whitespace",
+    "LineTerminator",
+    "+",
+    "-",
+    "*",
+    "/",
+  ];
+
+  function* tokenize(source) {
+    let result = null;
+    let lastIndex = 0;
+    do {
+      lastIndex = regexp.lastIndex;
+      result = regexp.exec(source);
+      if (!result) break;
+
+      if (regexp.lastIndex - lastIndex > result[0].length) {
+        throw new Error(
+          `Unexpected token \"${source.slice(
+            lastIndex,
+            regexp.lastIndex - result[0].length
+          )}"!`
+        );
+      }
+
+      let token = {
+        type: null,
+        value: null,
+      };
+      for (let i = 0; i < dictionary.length; i++) {
+        if (result[i + 1]) {
+          token.type = dictionary[i];
+        }
+      }
+      token.value = result[0];
+      yield token;
+    } while (result);
+    yield { type: "EOF" };
+  }
+
+  function Expression(source) {
+    let [token1, token2] = source;
+    let [{ type: type1 }, { type: type2 }] = [token1, token2];
+    if (type1 === "AdditiveExpression" && type2 === "EOF") {
+      let node = {
+        type: "Expression",
+        children: [source.shift(), source.shift()],
+      };
+      source.unshift(node);
+
+      return node;
+    }
+    AdditiveExpression(source);
+    return arguments.callee(source);
+  }
+
+  function AdditiveExpression(source) {
+    let [token1, token2] = source;
+    if (!token2) return token1;
+    let [{ type: type1 }, { type: type2 }] = [token1, token2];
+
+    if (type1 === "Number") {
+      MultiplicativeExpression(source);
+      return arguments.callee(source);
+    } else if (type1 === "MultiplicativeExpression") {
+      source.unshift({
+        type: "AdditiveExpression",
+        children: [source.shift()],
+      });
+      return arguments.callee(source);
+    } else if (
+      source.length > 1 &&
+      type1 === "AdditiveExpression" &&
+      (type2 === "+" || type2 === "-")
+    ) {
+      let node = {
+        type: "AdditiveExpression",
+        children: [source.shift(), source.shift()],
+      };
+      MultiplicativeExpression(source);
+      node.children.push(source.shift());
+      source.unshift(node);
+      return arguments.callee(source);
+    }
+  }
+
+  function MultiplicativeExpression(source) {
+    let [token1, token2] = source;
+    if (!token2) return token1;
+    let [{ type: type1 }, { type: type2 }] = [token1, token2];
+
+    if (type1 === "Number") {
+      source.unshift({
+        type: "MultiplicativeExpression",
+        children: source.shift(),
+      });
+      return arguments.callee(source);
+    } else if (
+      source.length > 1 &&
+      type1 === "MultiplicativeExpression" &&
+      (type2 === "*" || type2 === "/")
+    ) {
+      source.unshift({
+        type: "MultiplicativeExpression",
+        children: [source.shift(), source.shift(), source.shift()],
+      });
+      return arguments.callee(source);
+    }
+  }
+
+  let source = [];
+
+  for (let token of tokenize("20+ 10 * 25")) {
+    // console.log(token);
+
+    if (!["Whitespace", "LineTerminator"].includes(token.type)) {
+      source.push(token);
+    }
+  }
+
+  console.log(Expression(source));
+  // console.log(MultiplicativeExpression(source));
+</script>
