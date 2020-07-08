@@ -1,0 +1,94 @@
+<input id="r" type="range" min="0" max="255" /> <br />
+<input id="g" type="range" min="0" max="255" /> <br />
+<input id="b" type="range" min="0" max="255" />
+
+<div id="color" style="width: 100px; height: 100px;"></div>
+
+<script>
+  let handlers = new Map(); //执行双向绑定的函数(防止重复绑定)
+  let reactivities = new Map(); //已响应式的对象(防止重复绑定响应对象)
+  let userdReactivities = []; //双向绑定的对象中的属性(遍历添加进handlers)
+
+  function reactive(obj) {
+    if (reactivities.has(obj)) return reactivities.get(obj);
+
+    let proxy = new Proxy(obj, {
+      get(obj, prop) {
+        console.log(obj, prop);
+        userdReactivities.push([obj, prop]);
+        if (typeof obj[prop] === "object") {
+          return reactive(obj[prop]);
+        }
+        return obj[prop];
+      },
+      set(obj, prop, val) {
+        obj[prop] = val;
+
+        if (handlers.has(obj) && handlers.get(obj).has(prop)) {
+          for (handler of handlers.get(obj).get(prop)) {
+            handler();
+          }
+        }
+
+        return obj[prop];
+      },
+    });
+
+    reactivities.set(obj, proxy);
+    reactivities.set(proxy, proxy); //针对同一对象 两个 proxy 是相同的
+
+    return proxy;
+  }
+
+  function effect(handler) {
+    userdReactivities = [];
+    handler();
+    // console.log(userdReactivities);
+    for (let userdReactivity of userdReactivities) {
+      [obj, prop] = userdReactivity;
+      if (!handlers.has(obj)) {
+        handlers.set(obj, new Map());
+      }
+      if (!handlers.get(obj).has(prop)) {
+        handlers.get(obj).set(prop, []);
+      }
+      handlers.get(obj).get(prop).push(handler);
+    }
+  }
+
+  let dummy;
+  let proxy = reactive({
+    r: 0,
+    g: 0,
+    b: 0,
+  });
+
+  effect(() => {
+    document.getElementById("r").value = proxy.r;
+  });
+  effect(() => {
+    document.getElementById("g").value = proxy.g;
+  });
+  effect(() => {
+    document.getElementById("b").value = proxy.b;
+  });
+
+  document.getElementById("r").addEventListener("input", (e) => {
+    proxy.r = e.target.value;
+  });
+
+  document.getElementById("g").addEventListener("input", (e) => {
+    proxy.g = e.target.value;
+  });
+
+  document.getElementById("b").addEventListener("input", (e) => {
+    proxy.b = e.target.value;
+  });
+
+  effect(() => {
+    let { r, g, b } = proxy;
+    document.getElementById(
+      "color"
+    ).style.backgroundColor = `rgb(${r},${g},${b})`;
+  });
+</script>
