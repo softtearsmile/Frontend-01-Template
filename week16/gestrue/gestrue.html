@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestrue</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="my"
+      style="
+        width: 100px;
+        height: 100px;
+        background-color: skyblue;
+        transform: translate(0px, 0px);
+      "
+    ></div>
+    <script src="./gestrue.js"></script>
+    <script>
+      let my = document.getElementById("my");
+
+      enableGesture(my);
+
+      let x = 0,
+        y = 0;
+
+      my.addEventListener("pan", (e) => {
+        let dx = x + e.clientX - e.startX,
+          dy = y + e.clientY - e.startY;
+
+        my.style.transform = `translate(${dx}px,${dy}px)`;
+      });
+
+      my.addEventListener("panEnd", (e) => {
+        x = x + e.clientX - e.startX;
+        y = y + e.clientY - e.startY;
+      });
+    </script>
+  </body>
+</html>
