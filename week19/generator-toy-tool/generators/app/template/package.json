@@ -1,0 +1,15 @@
+{
+  "name": "<%= title %>",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack-dev-server",
+    "test": "mocha --require @babel/register",
+    "coverage": "nyc --reporter=lcov --reporter=text-summary npm run test",
+    "build": "webpack"
+  },
+  "keywords": [],
+  "author": "chenhaonan <chenhaonan_2008@163.com>",
+  "license": "MIT"
+}
